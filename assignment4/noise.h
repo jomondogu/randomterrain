@@ -19,21 +19,21 @@ inline float rand01() {
     return ((float) std::rand())/((float) RAND_MAX);
 }
 
-float* perlin2D(const int width, const int height, const int period=64);
+float* perlin2D(const int width, const int height, const int period=256);
 
 /// Generates a heightmap using fractional brownian motion
 R32FTexture* fBm2DTexture() {
 
     ///--- Precompute perlin noise on a 2D grid
-    const int width = 512;
-    const int height = 512;
-    float *perlin_data = perlin2D(width, height, 128);
+    const int width = 1028;
+    const int height = 1028;
+    float *perlin_data = perlin2D(width, height, 64);
 
     ///--- fBm parameters
     float H = 0.8f;
     float lacunarity = 2.0f;
     float offset = 0.1f;
-    const int octaves = 2;
+    const int octaves = 32;
 
     ///--- Initialize to 0s
     float *noise_data = new float[width*height];
@@ -58,7 +58,7 @@ R32FTexture* fBm2DTexture() {
             int J = j;
             for(int k = 0; k < octaves; ++k) {
                 /// TODO: Get perlin noise at I,J, add offset, multiply by proper term and add to noise_data
-                noise_data[i+j*height] += (perlin_data[i+j*height]+offset) * exponent_array[k];
+                noise_data[i+j*height] += (perlin_data[(I%width)+(J%height)*height]+offset) * exponent_array[k];
 
                 ///--- Point to sample at next octave
                 I *= (int) lacunarity;

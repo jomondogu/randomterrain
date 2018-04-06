@@ -1,5 +1,5 @@
 R"(
-//Phong model derived from https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model
+//Blinn-Phong model derived from https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model
 #version 330 core
 uniform sampler2D noiseTex;
 
@@ -21,12 +21,12 @@ out vec4 color;
 void main() {
 
     // Directional light source
-    vec3 lightDir = normalize(vec3(1,1,1));
+    vec3 lightDir = normalize(vec3(1,-1,1));
     float lightPower = 1.0;
     vec3 ambientColour = vec3(0.5,0.5,0.5);
     vec3 diffuseColour = vec3(0.6,0.6,0.6);
-    vec3 specColour = vec3(1.0,1.0,1.0);
-    float shininess = 64.0;
+    vec3 specColour = vec3(0.7,0.7,0.7);
+    float shininess = 32.0;
 
     // Texture size in pixels
     ivec2 size = textureSize(noiseTex, 0);
@@ -42,21 +42,37 @@ void main() {
 
     /// TODO: Texture according to height and slope
     /// HINT: Read noiseTex for height at uv
-    float elevation = texture(noiseTex, uv).x;
+    // Texture size in pixels
+    vec2 texCoords = uv*512;
+
+    float elevation = texture(noiseTex,uv).x;
+    float slopeCos = dot(N,vec3(0.0f,0.0f,1.0f));
+
+    vec3 waterTex = vec3(texture(water,texCoords).xyz);
+
+    vec3 sandTex = vec3(texture(sand,texCoords).xyz);
+    float sandWeight = -64*pow(elevation,2) + 1.0f;
+    if (sandWeight < 0.0f) sandWeight = 0.0f;
+
+    vec3 rockTex = vec3(texture(rock,texCoords).xyz);
+    float rockWeight = -pow(elevation-1,2) + 1.0f;
+    if (rockWeight < 0.0f) rockWeight = 0.0f;
+
+    vec3 grassTex = vec3(texture(grass,texCoords).xyz);
+    float grassWeight = 1.0f - sandWeight - rockWeight;
+
+    vec3 snowTex = vec3(texture(snow,texCoords).xyz);
+
     vec3 c;
     if (elevation <= 0.0f){
-        c = vec3(texture(water, uv).xyz);
-    }else if(elevation <= 0.1f){
-        c = vec3(texture(sand,uv).xyz);
-    }else if(elevation <= 0.5f){
-        c = vec3(texture(grass,uv).xyz);
+        c = waterTex;
     }else{
-        if(dot(N,vec3(0.0f,0.0f,1.0f)) >= 0.25f){
-            c = vec3(texture(snow,uv).xyz);
-        }else{
-            c = vec3(texture(rock,uv).xyz);
-        }
-    };
+        c = sandTex*sandWeight + grassTex*grassWeight + rockTex*rockWeight;
+    }
+
+    if(elevation >= 0.5f && slopeCos >= 0.02f){
+        c = snowTex;
+    }
 
     /// TODO: Calculate ambient, diffuse, and specular lighting
     /// HINT: max(,) dot(,) reflect(,) normalize()
@@ -71,8 +87,12 @@ void main() {
         float specAngle = max(dot(N,halfDir),0.0f);
         specular = pow(specAngle,shininess/4.0);
     }
-    c *= ambientColour + diffuseColour*lambertian*vec3(1.0f,1.0f,1.0f)*lightPower + specColour*specular*vec3(1.0f,1.0f,1.0f)*lightPower;
+    if(elevation < 0.0f){
+        c *= ambientColour + diffuseColour*lambertian*vec3(1.0f,1.0f,1.0f)*lightPower;
+    }else{
+        c *= ambientColour + diffuseColour*lambertian*vec3(1.0f,1.0f,1.0f)*lightPower + specColour*specular*vec3(1.0f,1.0f,1.0f)*lightPower;
+    }
 
-    color = vec4(c,1);
+    color = vec4(c,1.0f);
 }
 )"
